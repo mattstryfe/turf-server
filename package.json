@@ -1,0 +1,35 @@
+{
+  "name": "turf-server-example",
+  "version": "1.0.0",
+  "description": "an example of using turf in a server context",
+  "main": "app.js",
+  "scripts": {
+    "start": "watchify public/index.js -o public/bundle.js & node index.js",
+    "build": "browserify public/index.js | uglifyjs -c -m > public/bundle.js"
+  },
+  "keywords": [
+    "turf",
+    "test",
+    "server",
+    "context"
+  ],
+  "author": "Tom MacWright",
+  "license": "ISC",
+  "dependencies": {
+    "@turf/turf": "^5.1.6",
+    "body-parser": "^1.18.3",
+    "express": "^4.15.2",
+    "hat": "0.0.3",
+    "oauth": "^0.9.15",
+    "request": "^2.51.0",
+    "simple-statistics": "^0.9.0",
+    "socket.io": "^2.1.1",
+    "transfer-rate": "^1.0.5",
+    "twit": "^2.2.11",
+    "xhr": "^2.0.1"
+  },
+  "devDependencies": {
+    "browserify": "^8.1.1",
+    "watchify": "^2.2.1"
+  }
+}
