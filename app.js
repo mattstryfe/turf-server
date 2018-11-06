@@ -1,9 +1,9 @@
-let express = require('express'),
-  app = express(),
+let app = require('express')(),
+  server = require('http').Server(app)
   turf = require('@turf/turf'),
   bodyParser = require('body-parser'),
-  OAuth = require('oauth'),
-  Twit = require('twit');
+  Twit = require('twit'),
+  io = require('socket.io')(server);
 
 // Dynamically set the port that this application runs on so that Heroku
 // can properly wrap the way that it connects to the outside network
@@ -17,9 +17,25 @@ app.use(function(req, res, next) {
   next();
 });
 
-app.post('/twittergetter', function (req, res) {
-  let results = {};
+// define interactions with client
+io.on('connection', function (socket) {
+  socket.emit('news', { hello: 'world' });
+  socket.on('my other event', function (data) {
+    console.log(data);
+  });
+});
 
+/*io.on('connection', (socket) => {
+  socket.on('new message', (data) => {
+    // we tell the client to execute 'new message'
+    socket.broadcast.emit('new message', {
+      username: socket.username,
+      message: data
+    });
+  });
+})*/
+
+app.post('/twittergetter', function (req, res) {
   var T = new Twit({
     consumer_key:         'tNBsGKO4JZE6peBHcBzkWttQO',
     consumer_secret:      'vaJFF2XuEE6IapDHC9CYYt5lTUskKMHIRPiYOkKF2Tn0W5WNB9',
@@ -33,10 +49,10 @@ app.post('/twittergetter', function (req, res) {
   //  search twitter for all tweets containing the word 'banana' since July 11, 2011
   //
   // T.get('search/tweets', { q: 'tornado since:2018-11-01', count: 100 }, function(err, data, response) {
-  //   results = response
-  //   res.send({
-  //     res: data
-  //   })
+    // results = response
+    // res.send({
+    //   res: data
+    // })
   // })
 
   //
@@ -49,7 +65,7 @@ app.post('/twittergetter', function (req, res) {
   let stream = T.stream('statuses/filter', { track: 'storm, hurricane, tornado', locations: washArea })
 
   stream.on('tweet', function (tweet) {
-    console.log(tweet.user.screen_name, ': ', tweet.text)
+    // console.log(tweet.user.screen_name, ': ', tweet.text)
 
     let twitterHeaders = {
       'Access-Control-Allow-Origin': '*',
@@ -63,45 +79,12 @@ app.post('/twittergetter', function (req, res) {
     //   console.log(`Received ${chunk.length} bytes of data.`);
     // });
 
+    // rs.push(tweet)
 
-    res.send({
-      res: tweet
-    })
+    // res.send({
+    //   res: rs
+    // })
   })
-
-  // let twitterHeaders = {
-  //     'Access-Control-Allow-Origin': '*',
-  //     'Accept': '*/*',
-  //     'Content-Type': 'application/x-www-form-urlencoded',
-  // }
-  // let oa = new OAuth.OAuth(
-  //   'https://api.twitter.com/oauth/request_token',
-  //   'https://api.twitter.com/oauth/access_token',
-  //   'tNBsGKO4JZE6peBHcBzkWttQO',
-  //   'vaJFF2XuEE6IapDHC9CYYt5lTUskKMHIRPiYOkKF2Tn0W5WNB9',
-  //   '1.0A',
-  //   null,
-  //   'HMAC-SHA1',
-  //   'kYjzVBB8Y0ZFabxSWbWovY3uYSQ2pTgmZeNu2VS4cg',
-  //    twitterHeaders
-  // )
-  //
-  // oa.post(
-  //   // 'https://api.twitter.com/1.1/trends/place.json?id=23424977',
-  //   'https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=twitterapi&count=2',
-  //   '1054847332230012930-2fl0igkVRRlxn0i9BwsQxzNwO37FnW',
-  //   'hymESo2uTVnWnKuctJ0dEuoBtgniRpLNQkZ4RD3Ds9gKP ',
-  //   function (e, data, res) {
-  //     results = res
-  //
-  //     if (e) console.error(e);
-  //     console.log(require('util').inspect(data));
-  //   }
-  // )
-
-  // res.send({
-  //   res: results
-  // })
 })
 
 app.post('/random', function (req, res) {
@@ -143,23 +126,9 @@ app.post('/searchwithin', function(req, res) {
   });
 });
 
-app.use(express.static(__dirname + '/public'));
-
-let server = app.listen(app.get('port'), function () {
-  let host = server.address().address;
-  let port = server.address().port;
-  console.log('running %s %s', host, port);
-});
-
-
-//let oa = new OAuth.OAuth(
-//     'https://api.twitter.com/oauth/request_token',
-//     'https://api.twitter.com/oauth/access_token',
-//     'tNBsGKO4JZE6peBHcBzkWttQO',
-//     'vaJFF2XuEE6IapDHC9CYYt5lTUskKMHIRPiYOkKF2Tn0W5WNB9',
-//     '1.0A',
-//     null,
-//     'HMAC-SHA1',
-//     { 'timestamp': req.body.timestamp },
-//     { 'headers': twitterHeaders }  // these are headers
-//   );
+server.listen(3000)
+// let server = app.listen(app.get('port'), function () {
+//   let host = server.address().address;
+//   let port = server.address().port;
+//   console.log('running %s %s', host, port);
+// });
