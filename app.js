@@ -1,12 +1,48 @@
+const config = require('./config.js');
 let app = require('express')(),
-  server = require('http').Server(app)
+  server = require('http').Server(app),
   turf = require('@turf/turf'),
   fs = require('fs'),
   bodyParser = require('body-parser'),
   Twit = require('twit'),
   io = require('socket.io')(server);
 
-const { Transform } = require('stream');
+//----------------------//
+//---- STREAM STUFF ----//
+//----------------------//
+
+let T = new Twit({
+  consumer_key:         config.config.consumer_key,
+  consumer_secret:      config.config.consumer_secret,
+  access_token:         config.config.access_token,
+  access_token_secret:  config.config.access_token_secret,
+  timeout_ms:           config.config.timeout_ms,    // optional HTTP request timeout to apply to all requests.
+  strictSSL:            config.config.strictSSL,     // optional - requires SSL certificates to be valid.
+})
+let sanFrancisco = [ '-122.75', '36.8', '-121.75', '37.8' ]
+let washArea = ['-78.420410','38.513788','-76.107788','39.474365'];
+
+// commas as logical ORs, while spaces are equivalent to logical ANDs
+let stream = T.stream('statuses/filter', { track: 'storm, hurricane, tornado', locations: washArea })
+
+// define interactions with client
+io.on('connection', function (socket) {
+  console.log('Connecting to Twitter stream...')
+
+  stream.on('tweet', function (tweet) {
+    socket.emit('twitter feed', tweet)
+  })
+
+  socket.on('disconnect', function () {
+    console.log('disconnecting...')
+  })
+});
+
+//----------------------//
+//---- END OF STREAM ----//
+//----------------------//
+
+
 
 // Dynamically set the port that this application runs on so that Heroku
 // can properly wrap the way that it connects to the outside network
@@ -20,67 +56,6 @@ app.use(function(req, res, next) {
   next();
 });
 
-// define interactions with client
-io.on('connection', function (socket) {
-  console.log('Connecting to Twitter stream...')
-
-  let T = new Twit({
-    consumer_key:         'tNBsGKO4JZE6peBHcBzkWttQO',
-    consumer_secret:      'vaJFF2XuEE6IapDHC9CYYt5lTUskKMHIRPiYOkKF2Tn0W5WNB9',
-    access_token:         '1054847332230012930-2fl0igkVRRlxn0i9BwsQxzNwO37FnW',
-    access_token_secret:  'hymESo2uTVnWnKuctJ0dEuoBtgniRpLNQkZ4RD3Ds9gKP',
-    timeout_ms:           60*1000,  // optional HTTP request timeout to apply to all requests.
-    strictSSL:            true,     // optional - requires SSL certificates to be valid.
-  })
-  let sanFrancisco = [ '-122.75', '36.8', '-121.75', '37.8' ]
-  let washArea = ['-78.420410','38.513788','-76.107788','39.474365'];
-
-  // commas as logical ORs, while spaces are equivalent to logical ANDs
-  let stream = T.stream('statuses/filter', { track: 'storm, hurricane, tornado', locations: washArea })
-
-  stream.on('tweet', function (tweet) {
-    socket.emit('twitter feed', tweet)
-  })
-
-  // this isnt causing the error
-  socket.on('disconnect', function () {
-    console.log('disconnecting...')
-  })
-
-});
-
-/*app.post('/twittergetter', function (req, res, socket) {
-  let T = new Twit({
-    consumer_key:         'tNBsGKO4JZE6peBHcBzkWttQO',
-    consumer_secret:      'vaJFF2XuEE6IapDHC9CYYt5lTUskKMHIRPiYOkKF2Tn0W5WNB9',
-    access_token:         '1054847332230012930-2fl0igkVRRlxn0i9BwsQxzNwO37FnW',
-    access_token_secret:  'hymESo2uTVnWnKuctJ0dEuoBtgniRpLNQkZ4RD3Ds9gKP',
-    timeout_ms:           60*1000,  // optional HTTP request timeout to apply to all requests.
-    strictSSL:            true,     // optional - requires SSL certificates to be valid.
-  })
-  let sanFrancisco = [ '-122.75', '36.8', '-121.75', '37.8' ]
-  let washArea = ['-78.420410','38.513788','-76.107788','39.474365'];
-
-  // commas as logical ORs, while spaces are equivalent to logical ANDs
-  let stream = T.stream('statuses/filter', { track: 'storm, hurricane, tornado', locations: washArea })
-
-
-  stream.on('tweet', function (tweet, ) {
-    // process.stdin.pipe(tweet.objectToString)
-    // tweet.pipe(dst)
-    // const readable = tweet;
-    // readable.on('data', (chunk) => {
-    //   console.log(`Received ${chunk.length} bytes of data.`);
-    // });
-
-    // rs.push(tweet)
-
-    // res.send({
-    //   res: rs
-    // })
-  })
-  //stream.pipe(fs.createWriteStream('tweets.json'))
-})*/
 
 app.post('/random', function (req, res) {
   let randomCount = req.body.randomCount;
@@ -113,7 +88,7 @@ app.post('/searchwithin', function(req, res) {
     }
   });
 
-  console.log('----------- affected ----------')
+  console.log('----------- Affected ----------')
   console.log(affectedAssets)
   res.send({
     copyOfReq: req.body,
@@ -122,8 +97,3 @@ app.post('/searchwithin', function(req, res) {
 });
 
 server.listen(3000)
-// let server = app.listen(app.get('port'), function () {
-//   let host = server.address().address;
-//   let port = server.address().port;
-//   console.log('running %s %s', host, port);
-// });
