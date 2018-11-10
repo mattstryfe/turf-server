@@ -30,7 +30,22 @@ io.on('connection', function (socket) {
   console.log('Connecting to Twitter stream...')
 
   stream.on('tweet', function (tweet) {
-    socket.emit('twitter feed', tweet)
+    if (tweet.place !== null && tweet.place.bounding_box !== null) {
+      // fix the poly
+      let tweetPoly = tweet.place.bounding_box.coordinates;
+      tweetPoly[0].push(tweetPoly[0][0])
+
+      let geoPoint = turf.centerOfMass(turf.polygon(tweetPoly));
+      tweet.userLoc = geoPoint;
+
+      // append text to geoJson portion of object being sent
+      // TODO fix this
+      tweet.userLoc.properties.text = tweet.text;
+
+      // only emit tweets with proper geoCords
+      socket.emit('twitter feed', tweet)
+    }
+
   })
 
   socket.on('disconnect', function () {
