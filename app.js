@@ -37,12 +37,14 @@ io.on('connection', function (socket) {
     console.log('new filter:', userFilter)
     if (userFilter !== null) {
       console.log('stop/start stream!')
+      // TODO: this isn't actually working...  no new criteria is being sent.
       stream.stop()
       twitterFilter = userFilter;
       stream.start()
     }
   });
 
+  console.log('firing up stream again')
   let stream = T.stream('statuses/filter', { track: twitterFilter })
 
   stream.on('tweet', function (tweet) {
