@@ -21,16 +21,33 @@ let T = new Twit({
 })
 let sanFrancisco = [ '-122.75', '36.8', '-121.75', '37.8' ]
 let washArea = ['-78.420410','38.513788','-76.107788','39.474365'];
+let twitterSearchCriteria = [];
 
 // commas as logical ORs, while spaces are equivalent to logical ANDs
-let stream = T.stream('statuses/filter', { track: 'storm, hurricane, tornado', locations: washArea })
+// let stream = T.stream('statuses/filter', { track: 'storm hurricane tornado', locations: sanFrancisco })
+// let stream = T.stream('statuses/filter', { track: 'storm, hurricane, tornado, lightning, fire, wildfire, flood' })
 
 // define interactions with client
 io.on('connection', function (socket) {
   console.log('Connecting to Twitter stream...')
 
+  let twitterFilter = 'storm, hurricane, tornado, lightning, fire, wildfire, flood';
+  // let twitterFilter = 'trump';
+  socket.on('twitterFilter', function (userFilter) {
+    console.log('new filter:', userFilter)
+    if (userFilter !== null) {
+      console.log('stop/start stream!')
+      stream.stop()
+      twitterFilter = userFilter;
+      stream.start()
+    }
+  });
+
+  let stream = T.stream('statuses/filter', { track: twitterFilter })
+
   stream.on('tweet', function (tweet) {
     if (tweet.place !== null && tweet.place.bounding_box !== null) {
+      // console.log('tweet', tweet.text)
       // fix the poly
       let tweetPoly = tweet.place.bounding_box.coordinates;
       tweetPoly[0].push(tweetPoly[0][0])
@@ -42,6 +59,7 @@ io.on('connection', function (socket) {
       // TODO fix this
       tweet.userLoc.properties.text = tweet.text;
 
+      console.log('filter being used', twitterFilter)
       // only emit tweets with proper geoCords
       socket.emit('twitter feed', tweet)
     }
@@ -78,7 +96,7 @@ app.post('/random', function (req, res) {
   let points = turf.randomPoint(100, {bbox: [-90, 35, -105, 40]});
   let randomGeoJson = turf.sample(points, randomCount);
 
-  console.log('----------- Random ----------')
+  console.log('----------- Random (', randomGeoJson.length, ') ----------')
   res.send({
     randomGeoJson: randomGeoJson
   })
@@ -103,8 +121,8 @@ app.post('/searchwithin', function(req, res) {
     }
   });
 
-  console.log('----------- Affected ----------')
-  console.log(affectedAssets)
+  console.log('----------- Affected (', affectedAssets.length, ') ----------')
+  // console.log(affectedAssets)
   res.send({
     copyOfReq: req.body,
     affectedAssets: affectedAssets
